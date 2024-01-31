@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        .user-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 20px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            flex: 1;
+        }
+
+        .username {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        .email {
+            margin: 0;
+            font-size: 14px;
+            color: #777;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .status {
+            width: 10px;
+            display: inline-block;
+            height: 10px;
+            background-color: red;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        @media (max-width: 576px) {
+
+            /* Small devices (up to 576px) */
+            .user-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .user-info {
+                margin-top: 10px;
+            }
+
+            .username {
+                font-size: 16px;
+            }
+
+            .email {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Hello <span style="color:green ;" id="the_user"></span></h3>
+    <a href="{% url 'core:login_page'%}">Logout</a>
+    <div id="notifications"></div>
+    <h1>User List</h1>
+    <ul class="user-list" id="users-list">
+    </ul>
+    <script>
+        let toto = localStorage.getItem("token");
+        if (!toto) {
+            // Token is undefined or null
+            window.location.href = "{%url 'core:login_page'%}"; // Redirect to the login page
+        }
+
+        const token = JSON.parse(localStorage.getItem("token"))[0];
+        const userInfo = JSON.parse(localStorage.getItem("user_info"));
+        document.getElementById("the_user").innerHTML = userInfo.username;
+        if (!token) {
+            // Token is undefined or null
+            window.location.href = "{%url 'core:login_page'%}"; // Redirect to the login page
+        }
+
+        let notificationSocket = null;
+        let status = null;
+
+        function connectToNotificationSocket() {
+            notificationSocket = new WebSocket('ws://127.0.0.1:8000/ws/notification/', "Token'" + token);
+
+            notificationSocket.addEventListener("open", (event) => {
+                console.log("Notification socket opened!");
+            });
+
+            notificationSocket.addEventListener("message", (event) => {
+                let msg = JSON.parse(event.data);
+                let x = ` <div class="alert alert-primary alert-dismissible fade show" role="alert">
+                You have a message from <a href="chat/username/${msg.username}"><b>${msg.username}</b></a> 
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>`;
+                element = document.getElementById("notifications");
+                element.innerHTML = x + element.innerHTML;
+            });
+
+            notificationSocket.addEventListener("close", (event) => {
+                console.log("Notification socket closed. Reconnecting...");
+                setTimeout(connectToNotificationSocket, 3000); // Reconnect after 3 seconds
+            });
+        }
+
+        function connectToStatusSocket() {
+            status = new WebSocket('ws://127.0.0.1:8000/ws/online-users/', "Token'" + token);
+
+            status.addEventListener("open", (event) => {
+                console.log("Status socket opened!");
+            });
+
+            status.addEventListener("message", (event) => {
+                let msg = JSON.parse(event.data);
+                let userId = msg.user_id;
+                let online = msg.is_online;
+                let userItem = document.getElementById(`user-${userId}`);
+                if (userItem) {
+                    let statusIndicator = userItem.querySelector(".status");
+                    if (online) {
+                        statusIndicator.style.backgroundColor = "green";
+                    } else {
+                        statusIndicator.style.backgroundColor = "red";
+                    }
+                }
+            });
+
+            status.addEventListener("close", (event) => {
+                console.log("Status socket closed. Reconnecting...");
+                setTimeout(connectToStatusSocket, 3000); // Reconnect after 3 seconds
+            });
+        }
+
+        function fetchUsers() {
+            fetch("{% url 'core:users_list' %}", {
+                headers: {
+                    Authorization: "Token " + token
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let userList = document.getElementById("users-list");
+                    userList.innerHTML = "";
+                    data.forEach(user => {
+                        let userItem = document.createElement("li");
+                        userItem.id = `user-${user.id}`;
+                        userItem.classList.add("user-item");
+
+                        let a = document.createElement("a");
+                        a.setAttribute("href",location.protocol+location.host+"/chat/username/"+user.username);
+
+                        let userInfo = document.createElement("div");
+                        userInfo.classList.add("user-info");
+                        a.appendChild(userInfo);
+
+                        let username = document.createElement("h2");
+                        username.classList.add("username");
+                        username.innerText = user.first_name + " "+user.last_name;
+
+                        userInfo.appendChild(username);
+                        let statusIndicator = document.createElement("span");
+                        statusIndicator.classList.add("status");
+                        userItem.appendChild(statusIndicator);
+
+                        userItem.appendChild(userInfo);
+
+                        userList.appendChild(userItem);
+                    });
+                })
+                .catch(error => {
+                    console.log("Error fetching users:", error);
+                });
+        }
+
+        connectToNotificationSocket();
+        connectToStatusSocket();
+        fetchUsers();
+    </script>
+</body>
+
+</html>

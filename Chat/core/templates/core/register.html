@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Signup</title>
+    <style>
+        body {
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .form-group input[type="submit"] {
+            background-color: #4CAF50;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .form-group input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .error {
+            color: red;
+            margin-top: 5px;
+        }
+
+        .error-container {
+            background-color: #ffdddd;
+            color: #ff0000;
+            padding: 10px;
+            border: 1px solid #ff0000;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 480px) {
+            .container {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Signup</h2>
+        <form method="POST" id="SignupForm" onsubmit="submitForm(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="text" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" required>
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label for="password2">Confirm Password</label>
+                <input type="password" id="password2" name="password2" required>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Signup">
+            </div>
+            <p>Registered before? <a href="{%url 'core:login_page' %}">Login</a></p>
+        </form>
+    </div>
+    <script>
+        function submitForm(event) {
+            event.preventDefault();
+
+            // Get form input values
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const pass2 = document.getElementById("password2").value;
+            const first_name = document.getElementById("first_name").value;
+            const last_name = document.getElementById("last_name").value;
+            const email = document.getElementById('email').value;
+
+            // Create request body
+            const data = {
+                username: username,
+                password: password,
+                password2: pass2,
+                first_name: first_name,
+                last_name: last_name,
+                email: email
+            };
+
+            // Send POST request
+            fetch("http://127.0.0.1:8000/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (response.status === 204) {
+                        window.location.href = "http://127.0.0.1:8000/login-page";
+                    } else if (response.status === 400) {
+                        return response.json();
+                    } else {
+                        return response.json();
+                        throw new Error("Unexpected response");
+                    }
+                })
+                .then(responseData => {
+                    if (responseData) {
+                        const errorContainer = document.createElement("div");
+                        errorContainer.classList.add("error-container");
+
+                        for (const field in responseData) {
+                            if (Array.isArray(responseData[field])) {
+                                const errorMessage = document.createElement("p");
+                                errorMessage.innerHTML = `Error (${field}): ${responseData[field][0]}`;
+                                errorContainer.appendChild(errorMessage);
+                            }
+                        }
+
+                        document.body.insertBefore(errorContainer, document.body.firstChild);
+                    } else {
+                        console.log(responseData);
+                    }
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+    </script>
+</body>
+
+</html>

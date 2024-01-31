@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html >
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: fit-content;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #333333;
+            font-size: 26px;
+            line-height: 1.5;
+        }
+        
+        p {
+            color: #555555;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        .code {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            width:max-content;
+            margin:20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Email Confirmation</h1>
+        <p>Thank you for joining us to our website , please click on Confirm to confirm your email :</p>
+        <p class="code"><a href="{{confirm_url}}">Confirm</a></p>
+        <p>Ignore this message if it's not you</p>
+    </div>
+</body>
+</html>

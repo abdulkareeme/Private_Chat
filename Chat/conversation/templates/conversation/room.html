@@ -1,0 +1,367 @@
+<!-- chat/templates/chat/room.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Chat Room</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <style>
+        /* Global styles */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Chat container */
+        #chat {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+        }
+
+        #chat-messages {
+            height: 300px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+        }
+
+        #chat-messages p {
+            margin: 0;
+            padding: 5px;
+        }
+
+        #message,
+        #messageP,
+        #time {
+            width: 94%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        #send {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #send:hover {
+            background-color: #45a049;
+        }
+
+        /* Form styles */
+        form {
+            margin-top: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        form input[type="datetime-local"] {
+            width: 100%;
+        }
+
+        form button[type="submit"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        form button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        #form2 {
+            width: 70%;
+            margin: auto;
+            margin-top: 50px;
+        }
+
+        #chat-message div {
+            background-color: #4caf50;
+            width: fit-content;
+            border-radius: 6px;
+        }
+
+        /* Responsive styles */
+        @media (max-width: 480px) {
+            #chat {
+                max-width: 100%;
+            }
+
+            #form2 {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h3>Hello <span style="color:green ;" id="the_user"></span></h3>
+    <a href="{% url 'core:login_page'%}">Logout</a>
+    <div id="notifications"></div>
+    <div id="chat">
+        <h3 style="width: fit-content; margin-top: 10px; margin-bottom: 10px;">{{username}}</h3>
+        <p id="status" style="color: green;"></p>
+        <div id="chat-messages"></div>
+
+        <input id="message" placeholder="Message">
+
+        <button id="send">Send</button>
+    </div>
+
+
+
+
+    <script>
+        let toto = localStorage.getItem("token");
+        if (!toto) {
+            // Token is undefined or null
+            window.location.href = "{%url 'core:login_page'%}"; // Redirect to the login page
+
+        }
+        const token = JSON.parse(localStorage.getItem("token"))[0];
+        const userInfo = JSON.parse(localStorage.getItem("user_info"));
+        document.getElementById("the_user").innerHTML = userInfo.username;
+        if (!token) {
+            // Token is undefined or null
+            window.location.href = "{%url 'core:login_page'%}"; // Redirect to the login page
+
+        }
+        let socket = null;
+        let notificationSocket = null;
+        let user_status = "last seen {{last_seen}}";
+        function connectToChatSocket() {
+            socket = new WebSocket('ws://127.0.0.1:8000/ws/private_chat/{{username}}', "Token'" + token);
+
+            socket.addEventListener("open", (event) => {
+                console.log("Chat socket opened!");
+            });
+
+            socket.addEventListener("message", (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.sender == userInfo.username && msg.message) {
+                    document.getElementById("chat-messages").innerHTML +=
+                        `<div style="display:flex; justify-content: end; margin-bottom:2px; flex-direction: column;  align-items: end;"> <p style="background-color: #4caf50;
+            width: fit-content;
+            border-radius: 6px;  " >${msg.message} <p style="font-size:9px;">${msg.time}</p> </p> </div>`;
+                } else if (msg.sender != userInfo.username && msg.message) {
+                    document.getElementById("chat-messages").innerHTML +=
+                        `<p style="width:fit-content ;background-color: #eee; border-radius: 6px;  margin-bottom:2px; ">${msg.message} <p style="font-size:9px;">${msg.time}</p> </p>`;
+                }
+                document.getElementById("chat-messages").scrollTop = document.getElementById("chat-messages").scrollHeight;
+                if (msg.typing_list.includes("{{username}}")) {
+                    document.getElementById("status").innerHTML = "Typing...";
+                }
+                else {
+                    document.getElementById("status").innerHTML = user_status;
+                }
+            });
+
+            socket.addEventListener("close", (event) => {
+                console.log("Chat socket closed. Reconnecting...");
+                setTimeout(connectToChatSocket, 3000); // Reconnect after 3 seconds
+            });
+        }
+
+        function connectToNotificationSocket() {
+            notificationSocket = new WebSocket('ws://127.0.0.1:8000/ws/notification/', "Token'" + token);
+
+            notificationSocket.addEventListener("open", (event) => {
+                console.log("Notification socket opened!");
+            });
+
+            notificationSocket.addEventListener("message", (event) => {
+                let msg = JSON.parse(event.data);
+                if (msg.username != "{{username}}") {
+                    let x = ` <div class="alert alert-primary alert-dismissible fade show" role="alert">
+                You have a message from <a href ="${msg.username}"> <b>${msg.username}</b></a> 
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>`;
+                    element = document.getElementById("notifications");
+                    element.innerHTML = x + element.innerHTML;
+                }
+            });
+
+            notificationSocket.addEventListener("close", (event) => {
+                console.log("Notification socket closed. Reconnecting...");
+                setTimeout(connectToNotificationSocket, 3000); // Reconnect after 3 seconds
+            });
+        }
+        let status = null;
+        function connectToStatusSocket() {
+            status = new WebSocket('ws://127.0.0.1:8000/ws/online-users/', "Token'" + token);
+
+            status.addEventListener("open", (event) => {
+                console.log("Status socket opened!");
+            });
+
+            status.addEventListener("message", (event) => {
+                let online_users = JSON.parse(event.data).online_users;
+                if (online_users.includes("{{username}}")) {
+                    user_status = "Online";
+                }
+                else {
+                    user_status = "last seen " + "{{last_seen}}";
+                }
+                document.getElementById("status").innerHTML = user_status;
+            });
+
+            status.addEventListener("close", (event) => {
+                console.log("Status socket closed. Reconnecting...");
+                setTimeout(connectToStatusSocket, 3000); // Reconnect after 3 seconds
+            });
+        }
+
+        // Connect to WebSocket on page load
+
+
+        // Send message when button is clicked
+        document.getElementById("send").addEventListener("click", () => {
+            const message = document.getElementById("message").value;
+            socket.send(JSON.stringify({
+                message: message
+            }));
+            document.getElementById("message").value = "";
+        });
+
+        document.getElementById("message").addEventListener("input", () => {
+            if (document.getElementById("message").value == "") {
+                socket.send(JSON.stringify({
+                    is_typing: false
+                }));
+            }
+            else {
+                if (document.getElementById("message").value.length == 1) {
+                    socket.send(JSON.stringify({
+                        is_typing: true
+                    }));
+                }
+            }
+        });
+        function submitForm(event) {
+            event.preventDefault();
+            // Get form input values
+            const messageP = document.getElementById("messageP").value;
+            const time = document.getElementById("time").value;
+            document.getElementById("reset").click();
+            userTime = new Date();
+            const user_timezone_offset = userTime.getTimezoneOffset(); // Get the timezone offset in minutes
+            // Create request body
+            const data = {
+                messageP: messageP,
+                time: time,
+                user_timezone_offset: user_timezone_offset
+            };
+
+            // Send POST request
+            fetch("{%url 'conversation:periodic_task' username%}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Token ${token}`
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(responseData => {
+                    console.log("Success");
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        }
+
+        function getMessages() {
+
+
+            // Send GET request
+            fetch("http://127.0.0.1:8000/chat/messages/{{username}}", {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Token ${token}`
+                },
+            })
+                .then(response => response.json())
+                .then(responseData => {
+                    console.log((responseData));
+                    let messages = responseData.results;
+                    let element = document.getElementById("chat-messages");
+                    for (let i = 0; i < messages.length; i++) {
+                        let child = "";
+                        if (messages[i].sender == userInfo.id) {
+                            child = `<div style="display:flex; justify-content: end; margin-bottom:2px; flex-direction: column;  align-items: end;"> <p style="background-color: #4caf50;
+                             width: fit-content;
+                             border-radius: 6px;  " >${messages[i].content} <p style="font-size:9px;">${messages[i].time}</p> </p> </div>`;
+
+                        }
+                        else {
+                            child = `<p style="width:fit-content ;background-color: #eee; border-radius: 6px;  margin-bottom:2px; ">${messages[i].content} <p style="font-size:9px;">${messages[i].time}</p> </p>`;
+                        }
+                        element.innerHTML = child + element.innerHTML;
+                    }
+                    element.scrollTop = element.scrollHeight;
+                })
+                .catch(error => {
+                    console.log(error);
+                });
+        }
+
+        window.addEventListener("load", () => {
+            getMessages();
+            connectToChatSocket();
+            connectToNotificationSocket();
+            connectToStatusSocket();
+        });
+
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+    <form method="POST" id="form2" onsubmit="submitForm(event)">
+        <h3 style="width: fit-content; margin:auto; margin-top: 10px; margin-bottom: 20px;">Periodic Message</h3>
+        <input id="messageP" name="messageP" placeholder="Message" required>
+
+        <input type="datetime-local" name="time" id="time" required>
+
+        <button type="submit">send period message</button>
+        <input type="reset" id="reset" style="display: none;">
+    </form>
+
+</body>
+
+</html>
