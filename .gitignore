@@ -1,0 +1,4 @@
+.env
+Chat_env
+Chat/db.sqlite3
+*__pycache__

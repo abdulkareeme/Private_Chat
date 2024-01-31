@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # rabbitmq:
+  #   image: rabbitmq:management
+  #   restart: always
+  #   container_name: rabbitmq
+  #   ports:
+  #     - 5672:5672
+  #     - 15672:15672
+  redis:
+    image: redis:7.0.11-alpine
+    ports:
+      - "6379:6379"
+  django:
+    container_name: chat_app
+    build:
+      context: ./Chat
+    command: uvicorn Chat.asgi:application --host 0.0.0.0 --port 8000 --workers 4 --log-level debug --reload
+    volumes:
+      - ./Chat:/usr/src/chat_app/
+    ports:
+      - 8000:8000
+    environment:
+      - DEBUG=${DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-Chat.settings}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - redis
+  celery:
+    container_name: chat_celery
+    build:
+      context: ./Chat
+    command: celery --app=Chat worker -l INFO -Q notification_queue,periodic_message,email_confirmation
+    volumes:
+      - ./Chat:/usr/src/Chat_app/
+    environment:
+      - DEBUG=${DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-Chat.settings}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+    depends_on:
+      - redis
+      - django
+  flower:
+    image: mher/flower
+    restart: always
+    ports:
+      - 5555:5555
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+    depends_on:
+      - redis
+      - django
+      - celery
+  celery_beat:
+    container_name: celery_beat
+    build:
+      context: ./Chat
+    command: celery --app=Chat beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./Chat:/usr/src/chat_app/
+    environment:
+      - DEBUG=${DEBUG}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-Chat.settings}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
