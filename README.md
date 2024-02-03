@@ -54,7 +54,7 @@ Private Chat is a web application that allows users to have private conversation
 
 6. Access the application by visiting `http://localhost:8000` in your web browser.
 
-##Images
+## Images
 1. List Users :
    ![example1](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2012-48-23.png)
 2. Notification :
