@@ -31,7 +31,7 @@ Private Chat is a web application that allows users to have private conversation
    git clone https://github.com/abdulkareeme/Private_Chat.git
    ```
 
-2. :
+2. Change the privilage of entrypoint.sh file to be excutable file :
 
    ```bash
    cd Private_Chat
@@ -53,4 +53,18 @@ Private Chat is a web application that allows users to have private conversation
    ```
 
 6. Access the application by visiting `http://localhost:8000` in your web browser.
+
+##Images
+1. List Users :
+   ![example1](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2012-48-23.png)
+2. Notification :
+   ![example2](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2012-57-14.png)
+3. Convesation between tow users and status for every user (typing , online , last seen) :
+   ![example3](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2012-57-30.png)
+4. Periodic messages :
+   ![example4](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2012-59-22.png)
+5. The result of the periodic message :
+   ![example5](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2013-00-14.png)
+6. The Flower server to view all the tasks :
+   ![example6](https://github.com/abdulkareeme/Private_Chat/blob/main/images/Screenshot%20from%202024-02-03%2014-19-15.png)
 
