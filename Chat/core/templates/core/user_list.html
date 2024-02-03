@@ -7,6 +7,7 @@
     <title>User List</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -63,27 +64,7 @@
             background-color: red;
             border-radius: 50%;
             margin-right: 5px;
-        }
 
-        @media (max-width: 576px) {
-
-            /* Small devices (up to 576px) */
-            .user-item {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .user-info {
-                margin-top: 10px;
-            }
-
-            .username {
-                font-size: 16px;
-            }
-
-            .email {
-                font-size: 12px;
-            }
         }
     </style>
 </head>
@@ -93,7 +74,7 @@
     <a href="{% url 'core:login_page'%}">Logout</a>
     <div id="notifications"></div>
     <h1>User List</h1>
-    <ul class="user-list" id="users-list">
+    <ul class="user-list" id=users-list>
     </ul>
     <script>
         let toto = localStorage.getItem("token");
@@ -108,8 +89,8 @@
         if (!token) {
             // Token is undefined or null
             window.location.href = "{%url 'core:login_page'%}"; // Redirect to the login page
-        }
 
+        }
         let notificationSocket = null;
         let status = null;
 
@@ -123,11 +104,13 @@
             notificationSocket.addEventListener("message", (event) => {
                 let msg = JSON.parse(event.data);
                 let x = ` <div class="alert alert-primary alert-dismissible fade show" role="alert">
-                You have a message from <a href="chat/username/${msg.username}"><b>${msg.username}</b></a> 
+                You have a message from <a href ="chat/username/${msg.username}"> <b>${msg.username}</b></a> 
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>`;
                 element = document.getElementById("notifications");
                 element.innerHTML = x + element.innerHTML;
+
+
             });
 
             notificationSocket.addEventListener("close", (event) => {
@@ -135,7 +118,6 @@
                 setTimeout(connectToNotificationSocket, 3000); // Reconnect after 3 seconds
             });
         }
-
         function connectToStatusSocket() {
             status = new WebSocket('ws://127.0.0.1:8000/ws/online-users/', "Token'" + token);
 
@@ -144,18 +126,17 @@
             });
 
             status.addEventListener("message", (event) => {
-                let msg = JSON.parse(event.data);
-                let userId = msg.user_id;
-                let online = msg.is_online;
-                let userItem = document.getElementById(`user-${userId}`);
-                if (userItem) {
-                    let statusIndicator = userItem.querySelector(".status");
-                    if (online) {
-                        statusIndicator.style.backgroundColor = "green";
-                    } else {
-                        statusIndicator.style.backgroundColor = "red";
-                    }
+                let online_users = JSON.parse(event.data).online_users;
+                all_users = document.getElementsByClassName("status");
+                for (let i = 0; i < all_users.length; i++) {
+                    all_users[i].style.backgroundColor = "red";
                 }
+                for (let i = 0; i < online_users.length; i++) {
+                    element = document.getElementById(`${online_users[i]}_status`);
+                    if (element != null)
+                        element.style.backgroundColor = "green";
+                }
+                console.log(online_users);
             });
 
             status.addEventListener("close", (event) => {
@@ -163,52 +144,54 @@
                 setTimeout(connectToStatusSocket, 3000); // Reconnect after 3 seconds
             });
         }
+        function getUsersList() {
 
-        function fetchUsers() {
-            fetch("{% url 'core:users_list' %}", {
+
+            // Send GET request
+            fetch("http://127.0.0.1:8000/list-users", {
+                method: "GET",
                 headers: {
-                    Authorization: "Token " + token
-                }
+                    "Content-Type": "application/json",
+                    "Authorization": `Token ${token}`
+                },
             })
                 .then(response => response.json())
-                .then(data => {
-                    let userList = document.getElementById("users-list");
-                    userList.innerHTML = "";
-                    data.forEach(user => {
-                        let userItem = document.createElement("li");
-                        userItem.id = `user-${user.id}`;
-                        userItem.classList.add("user-item");
+                .then(responseData => {
+                    console.log((responseData));
+                    users = (responseData);
+                    let x = document.getElementById("users-list");
+                    for (let i = 0; i < users.length; i++) {
+                        let a = x.appendChild(document.createElement("a"));
+                        url = location.protocol + location.host + '/';
+                        a.setAttribute("href", "chat/username/" + users[i].username);
+                        li = a.appendChild(document.createElement("li"));
+                        li.classList.add("user-item");
+                        span = li.appendChild(document.createElement("span"));
+                        span.setAttribute('id', users[i].username + "_status");
+                        span.classList.add('status');
+                        h2 = li.appendChild(document.createElement("h2"));
+                        h2.innerHTML = users[i].first_name + " " + users[i].last_name;
+                        h2.classList.add("username");
 
-                        let a = document.createElement("a");
-                        a.setAttribute("href",location.protocol+location.host+"/chat/username/"+user.username);
+                    }
 
-                        let userInfo = document.createElement("div");
-                        userInfo.classList.add("user-info");
-                        a.appendChild(userInfo);
-
-                        let username = document.createElement("h2");
-                        username.classList.add("username");
-                        username.innerText = user.first_name + " "+user.last_name;
-
-                        userInfo.appendChild(username);
-                        let statusIndicator = document.createElement("span");
-                        statusIndicator.classList.add("status");
-                        userItem.appendChild(statusIndicator);
-
-                        userItem.appendChild(userInfo);
-
-                        userList.appendChild(userItem);
-                    });
                 })
                 .catch(error => {
-                    console.log("Error fetching users:", error);
+                    console.log(error);
                 });
         }
+        // Connect to WebSocket on page load
+        window.addEventListener("load", () => {
+            getUsersList();
+            connectToNotificationSocket();
+            connectToStatusSocket();
+        });
 
-        connectToNotificationSocket();
-        connectToStatusSocket();
-        fetchUsers();
+
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
 </body>
 
 </html>

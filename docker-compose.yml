@@ -18,7 +18,7 @@ services:
       context: ./Chat
     command: uvicorn Chat.asgi:application --host 0.0.0.0 --port 8000 --workers 4 --log-level debug --reload
     volumes:
-      - ./Chat:/usr/src/chat_app/
+      - ./Chat:/usr/src/app/
     ports:
       - 8000:8000
     environment:
@@ -38,7 +38,7 @@ services:
       context: ./Chat
     command: celery --app=Chat worker -l INFO -Q notification_queue,periodic_message,email_confirmation
     volumes:
-      - ./Chat:/usr/src/Chat_app/
+      - ./Chat:/usr/src/app/
     environment:
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
@@ -68,7 +68,7 @@ services:
       context: ./Chat
     command: celery --app=Chat beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
-      - ./Chat:/usr/src/chat_app/
+      - ./Chat:/usr/src/app/
     environment:
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
